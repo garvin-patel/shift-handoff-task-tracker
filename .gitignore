@@ -28,3 +28,4 @@ coverage/
 *.log
 *.dump
 *.sql.gz
+.local/
