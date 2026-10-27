@@ -1,0 +1,30 @@
+# Secrets and local settings
+.env
+.env.*
+!.env.example
+!.env.*.example
+*.pem
+*.key
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Frontend
+node_modules/
+dist/
+coverage/
+
+# Local artifacts
+.DS_Store
+.idea/
+*.log
+*.dump
+*.sql.gz
