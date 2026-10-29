@@ -227,7 +227,7 @@ select { cursor: pointer; }
   border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--surface); cursor: pointer; text-align: left;
 }
 .demo-account:hover:not(:disabled) { border-color: var(--accent); background: var(--accent-soft); }
-.demo-account span { flex: 1; display: flex; flex-direction: column; line-height: 1.3; }
+.demo-account > span:not(.avatar) { flex: 1; display: flex; flex-direction: column; line-height: 1.3; }
 .demo-account small { color: var(--muted); font-size: 0.8rem; }
 .demo-account .icon { color: var(--muted); }
 
