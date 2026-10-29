@@ -40,16 +40,16 @@ A shift change never closes a task. Every task keeps a full history of who creat
 |---|---|
 | Database: schema, demo data and constraint tests | ✅ Done |
 | Test plan | ✅ Done |
-| Login (password hashing + JWT) | ⏳ Next up |
-| Backend API | ⏳ Planned |
-| Frontend | ⏳ Planned |
+| Login (password hashing + JWT) and supervisor/employee roles | ✅ Done |
+| Backend API | ✅ Done |
+| Frontend, connected to the backend | ✅ Done |
 | Deployment | ⏳ Planned |
 
 Our goal is to be feature complete by November 15 and ready to demo by November 30, 2026.
 
 ## Getting started
 
-So far only the database runs. You need [Docker Desktop](https://www.docker.com/products/docker-desktop/).
+You need [Docker Desktop](https://www.docker.com/products/docker-desktop/) and [Node.js](https://nodejs.org/) 20 or newer.
 
 ```bash
 git clone https://github.com/garvin-patel/shift-handoff-task-tracker.git
@@ -63,25 +63,35 @@ cd shift-handoff-task-tracker
 cp .env.example .env
 ```
 
-Edit `.env` and set your own password, then start the database:
+Edit `.env` and set your own password, then start the database and the API:
 
 ```bash
 docker compose up -d
 ```
 
-This starts PostgreSQL and loads hotel demo data, including the Room 312 task. You can log in as any demo user, for example `maria.lopez@example.com`, with the password `password123`. For how to connect, reset and test the database, see the [database guide](database/README.md).
+This starts PostgreSQL with hotel demo data (including the Room 312 task) and the API at http://localhost:8000. Then start the frontend in a second terminal:
+
+```bash
+cd frontend && npm install && npm run dev
+```
+
+Open http://localhost:5173 and pick a demo account. Maria Lopez is the supervisor; James, Priya and Marcus are employees. Every demo password is `password123`. For how to connect, reset and test the database, see the [database guide](database/README.md).
 
 ## Repository layout
 
 ```
+frontend/          React + TypeScript app (see frontend/README.md)
+backend/           FastAPI app and its tests (see backend/README.md)
 database/          Tables, demo data and tests (see database/README.md)
 docs/              Project documents, such as the test plan
-docker-compose.yml Starts the database in Docker
+docker-compose.yml Starts the database and API in Docker
 .env.example       Template for your local settings (copy it to .env)
 ```
 
 ## Documentation
 
+- [Frontend guide](frontend/README.md): the screens, how to run them, and how they talk to the API
+- [Backend guide](backend/README.md): every endpoint and the supervisor/employee roles
 - [Database guide](database/README.md): the tables, how they connect, and how to run the database
 - [Test plan](docs/TEST_PLAN.md): what we test, who owns each test, and the Room 312 walkthrough
 
