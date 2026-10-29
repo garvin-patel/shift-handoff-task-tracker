@@ -16,6 +16,8 @@ docker compose up --build
 
 The schema and seed data load only the **first** time the `pgdata` volume is created. Run `docker compose down -v` to reset the database.
 
+**Deploying:** set `APP_ENV=production` and a real `JWT_SECRET`. The API refuses to start in production if `JWT_SECRET` is missing, is a placeholder from this repo, or is shorter than 32 characters. That's because anyone who knows the secret can create their own login tokens.
+
 ### Option B: Postgres in Docker, API locally (hot reload)
 
 ```bash
