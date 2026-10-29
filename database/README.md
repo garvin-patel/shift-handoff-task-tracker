@@ -185,10 +185,12 @@ Every line should say `PASS`. The tests don't change any data.
 | Table | What's in it |
 |---|---|
 | `users` | Maria Lopez (supervisor, Front Desk), James Carter (Front Desk), Priya Shah (Housekeeping) and Marcus Reed (Maintenance) |
-| `shifts` | Evening (Oct 27, ended), Morning (Oct 28, ended), and Evening (Oct 28, still going) |
+| `shifts` | Evening (yesterday, ended), Morning (today, ended), and Evening (today, started 1 hour ago and still going) |
 | `tasks` | 6 hotel tasks, including "Room 312 AC broken" |
 | `handoffs` | 1 handoff, from the first Evening shift to the Morning shift |
 
-The demo users have fake password hashes, so they can't log in.
+**Logging in:** every demo user's password is `password123`, for example `maria.lopez@example.com` / `password123`. This works right after a reset, with nothing else to run. The password is public in this repo, so use this seed for local demos only, never for a deployed database.
 
-Times are stored with their time zone, but `psql` shows them in UTC. For example, 3 PM Eastern appears as `19:00+00`.
+**Times move with the reset.** All demo times are relative to when the database was created, so the story always looks recent: Room 312 was reported "yesterday evening", and the current shift started 1 hour ago. To make the times fresh again, reset the database. The clock times won't always match the shift names. For example, if you reset at 10 AM, the current "Evening" shift starts at 9 AM.
+
+Times are stored with their time zone, but `psql` shows them in UTC.
