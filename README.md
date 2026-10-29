@@ -69,7 +69,7 @@ Edit `.env` and set your own password, then start the database:
 docker compose up -d
 ```
 
-This starts PostgreSQL and loads hotel demo data, including the Room 312 task. For how to connect, reset and test the database, see the [database guide](database/README.md).
+This starts PostgreSQL and loads hotel demo data, including the Room 312 task. You can log in as any demo user, for example `maria.lopez@example.com`, with the password `password123`. For how to connect, reset and test the database, see the [database guide](database/README.md).
 
 ## Repository layout
 

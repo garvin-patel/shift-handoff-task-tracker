@@ -242,13 +242,7 @@ This walks through the proposal's Room 312 story with the real app. Run it at le
    docker compose up -d --build
    ```
 
-3. Give the demo users real passwords:
-
-   ```bash
-   docker compose exec api python -m app.scripts.set_password --all-seed-users password123
-   ```
-
-4. Until the frontend exists, run each step at **http://localhost:8000/docs**. Click **Authorize** and log in with the user's email (for example `james.carter@example.com`) and `password123`. Then use the endpoint shown in the API column.
+3. Until the frontend exists, run each step at **http://localhost:8000/docs**. Click **Authorize** and log in with the user's email (for example `james.carter@example.com`) and `password123`. Every demo user has that password. Then use the endpoint shown in the API column.
 
 **Starting state (from the seed):** The current shift is Evening (shift 3). Room 312 (task 1) is `in_progress`, assigned to Marcus Reed, with high priority. It was carried over from the previous evening.
 
