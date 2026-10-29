@@ -1,23 +1,54 @@
-import { createContext, useContext, useState, type ReactNode } from "react";
-import { Navigate } from "react-router-dom";
+import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { Navigate, useLocation } from "react-router-dom";
+import { api, setUnauthorizedHandler, tokenStore } from "./api/client";
 import type { User } from "./types";
-import { api } from "./api/client";
 
-interface Ctx { user: User | null; login: (u: string, p: string) => Promise<void>; logout: () => void; }
-const AuthContext = createContext<Ctx>(null!);
+interface AuthContextValue {
+  user: User | null;
+  isSupervisor: boolean;
+  login: (email: string, password: string) => Promise<void>;
+  logout: () => void;
+}
+
+const AuthContext = createContext<AuthContextValue>(null!);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(() => JSON.parse(localStorage.getItem("user") || "null"));
-  const login = async (u: string, p: string) => {
-    const res = await api.login(u, p);
-    localStorage.setItem("token", res.token);
-    localStorage.setItem("user", JSON.stringify(res.user));
+  const [user, setUser] = useState<User | null>(null);
+  // False until we've checked whether a saved token is still valid.
+  const [ready, setReady] = useState(!tokenStore.get());
+
+  const logout = () => {
+    tokenStore.clear();
+    setUser(null);
+  };
+
+  useEffect(() => {
+    setUnauthorizedHandler(logout);
+    if (!tokenStore.get()) return;
+    api
+      .me()
+      .then(setUser)
+      .catch(logout)
+      .finally(() => setReady(true));
+  }, []);
+
+  const login = async (email: string, password: string) => {
+    const res = await api.login(email, password);
+    tokenStore.set(res.access_token);
     setUser(res.user);
   };
-  const logout = () => { localStorage.removeItem("token"); localStorage.removeItem("user"); setUser(null); };
-  return <AuthContext.Provider value={{ user, login, logout }}>{children}</AuthContext.Provider>;
+
+  if (!ready) return <div className="splash" aria-label="Loading" />;
+  return (
+    <AuthContext.Provider value={{ user, isSupervisor: user?.role === "supervisor", login, logout }}>
+      {children}
+    </AuthContext.Provider>
+  );
 }
+
 export const useAuth = () => useContext(AuthContext);
+
 export function RequireAuth({ children }: { children: ReactNode }) {
-  return useAuth().user ? <>{children}</> : <Navigate to="/login" replace />;
+  const location = useLocation();
+  return useAuth().user ? <>{children}</> : <Navigate to="/login" replace state={{ from: location.pathname }} />;
 }
