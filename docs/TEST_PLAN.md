@@ -328,4 +328,4 @@ The backend answered our earlier open questions. These are the current behaviors
 
 - **Should anyone be able to create an account?** Right now `POST /auth/register` is open to anyone. On a public deployment, strangers could sign up.
 - **Should only supervisors start and end shifts?** Right now any logged-in user can.
-- **The deployed app needs its own `JWT_SECRET`.** If none is set, the backend falls back to a default that's visible in the code, so anyone could create valid login tokens. Garvin will add a deployment check for this.
+- ✅ **Resolved: the deployed app needs its own `JWT_SECRET`.** With `APP_ENV=production`, the API now refuses to start if `JWT_SECRET` is missing, is a placeholder, or is shorter than 32 characters. This is tested in `backend/tests/test_config.py`.
