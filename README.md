@@ -75,7 +75,7 @@ This starts PostgreSQL with hotel demo data (including the Room 312 task) and th
 cd frontend && npm install && npm run dev
 ```
 
-Open http://localhost:5173 and pick a demo account. Maria Lopez is the supervisor; James, Priya and Marcus are employees. Every demo password is `password123`. For how to connect, reset and test the database, see the [database guide](database/README.md).
+Open http://localhost:5173 and pick a demo account. There are 9 staff across the Morning, Evening and Night shifts, with one supervisor per shift (Maria, Daniel and Sofia). Every demo password is `password123`. For how to connect, reset and test the database, see the [database guide](database/README.md).
 
 ## Repository layout
 

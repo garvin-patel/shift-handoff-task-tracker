@@ -6,6 +6,7 @@ CREATE TABLE users (
     role           TEXT NOT NULL DEFAULT 'employee'
                    CHECK (role IN ('employee', 'supervisor')),
     department     TEXT,
+    usual_shift    TEXT CHECK (usual_shift IN ('Morning', 'Evening', 'Night')),
     created_at     TIMESTAMPTZ NOT NULL DEFAULT now()
  );
 

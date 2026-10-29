@@ -1,4 +1,4 @@
-import type { Priority, Status } from "./types";
+import type { Priority, ShiftName, Status } from "./types";
 
 export const STATUS_LABEL: Record<Status, string> = {
   open: "Open",
@@ -9,10 +9,15 @@ export const STATUS_LABEL: Record<Status, string> = {
 export const PRIORITY_LABEL: Record<Priority, string> = { low: "Low", medium: "Medium", high: "High" };
 export const PRIORITY_RANK: Record<Priority, number> = { high: 0, medium: 1, low: 2 };
 
-// Shift names offered when a supervisor starts a shift, and which one usually comes next.
-export const SHIFT_NAMES = ["Morning", "Day", "Evening", "Night"];
-const NEXT_SHIFT: Record<string, string> = { Morning: "Evening", Day: "Evening", Evening: "Morning", Night: "Morning" };
-export const nextShiftName = (current?: string) => (current && NEXT_SHIFT[current]) || "Morning";
+// The hotel's three shifts, their usual hours, and which one comes next.
+export const SHIFT_NAMES: ShiftName[] = ["Morning", "Evening", "Night"];
+export const SHIFT_HOURS: Record<ShiftName, string> = {
+  Morning: "7 AM – 3 PM",
+  Evening: "3 PM – 11 PM",
+  Night: "11 PM – 7 AM",
+};
+const NEXT_SHIFT: Record<ShiftName, ShiftName> = { Morning: "Evening", Evening: "Night", Night: "Morning" };
+export const nextShiftName = (current?: string): ShiftName => NEXT_SHIFT[current as ShiftName] ?? "Morning";
 
 export function timeAgo(iso: string): string {
   const minutes = Math.round((Date.now() - new Date(iso).getTime()) / 60_000);
@@ -42,4 +47,5 @@ export function greeting(): string {
   return "Good evening";
 }
 
-export const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
+const IRREGULAR: Record<string, string> = { person: "people" };
+export const plural = (n: number, word: string) => `${n} ${n === 1 ? word : IRREGULAR[word] ?? `${word}s`}`;

@@ -163,7 +163,13 @@ INSERT INTO checks (check_name, expect, stmt) VALUES
      $$INSERT INTO users (name, email, password_hash) VALUES ('Dup', 'Constraints-Test@Example.com', 'x')$$),
   -- Inserts two active shifts at once, so this fails whether or not one is already active.
   ('two active shifts at once rejected', 'unique_violation',
-     $$INSERT INTO shifts (name) VALUES ('x'), ('y')$$);
+     $$INSERT INTO shifts (name) VALUES ('x'), ('y')$$),
+
+  -- users.usual_shift
+  ('valid: usual shift Night', 'accepted',
+     $$INSERT INTO users (name, email, password_hash, usual_shift) VALUES ('N', 'night@example.com', 'x', 'Night')$$),
+  ('invalid usual shift ''Afternoon'' rejected', 'check_violation',
+     $$INSERT INTO users (name, email, password_hash, usual_shift) VALUES ('A', 'aft@example.com', 'x', 'Afternoon')$$);
 
 -- Run each check and record PASS or FAIL. Every statement is undone right after
 -- it runs (by raising 'undo'), so one check can never affect the next.

@@ -1,5 +1,5 @@
 // The only file that talks to the backend. Every request sends the saved login token.
-import type { Handoff, HandoffSummary, NewTask, Priority, Shift, Status, Task, TaskDetail, TaskEvent, User } from "../types";
+import type { Handoff, HandoffSummary, NewTask, NewUser, Priority, Shift, Status, Task, TaskDetail, TaskEvent, User } from "../types";
 
 const API_URL = (import.meta.env.VITE_API_URL as string | undefined) ?? "http://localhost:8000";
 const TOKEN_KEY = "token";
@@ -60,6 +60,9 @@ export const api = {
     request<{ access_token: string; user: User }>("POST", "/auth/login", { email, password }),
   me: () => request<User>("GET", "/users/me"),
   users: () => request<User[]>("GET", "/users"),
+  createUser: (data: NewUser) => request<User>("POST", "/users", data),
+  changePassword: (currentPassword: string, newPassword: string) =>
+    request<null>("POST", "/users/me/password", { current_password: currentPassword, new_password: newPassword }),
 
   tasks: () => request<Task[]>("GET", "/tasks?limit=200"),
   task: (id: number) => request<TaskDetail>("GET", `/tasks/${id}`),

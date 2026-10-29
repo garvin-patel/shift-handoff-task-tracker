@@ -2,11 +2,11 @@ import { HashRouter, Navigate, Route, Routes } from "react-router-dom";
 import { AuthProvider, RequireAuth } from "./auth";
 import Layout from "./components/Layout";
 import { ToastProvider } from "./components/Toast";
-import CreateTask from "./pages/CreateTask";
-import Dashboard from "./pages/Dashboard";
 import Handoff from "./pages/Handoff";
 import Login from "./pages/Login";
 import TaskDetail from "./pages/TaskDetail";
+import Tasks from "./pages/Tasks";
+import Team from "./pages/Team";
 
 export default function App() {
   return (
@@ -16,10 +16,10 @@ export default function App() {
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route element={<RequireAuth><Layout /></RequireAuth>}>
-              <Route path="/" element={<Dashboard />} />
-              <Route path="/tasks/new" element={<CreateTask />} />
+              <Route path="/" element={<Tasks />} />
               <Route path="/tasks/:id" element={<TaskDetail />} />
               <Route path="/handoff" element={<Handoff />} />
+              <Route path="/team" element={<Team />} />
             </Route>
             <Route path="*" element={<Navigate to="/" />} />
           </Routes>

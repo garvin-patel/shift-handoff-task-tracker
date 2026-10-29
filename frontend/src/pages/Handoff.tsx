@@ -6,7 +6,7 @@ import { useAuth } from "../auth";
 import { useToast } from "../components/Toast";
 import { Avatar, ConfirmDialog, EmptyState, Icon, PriorityTag, Skeleton, StatusPill } from "../components/ui";
 import { PRIORITY_RANK, SHIFT_NAMES, clockTime, fullDate, nextShiftName, plural, timeAgo } from "../format";
-import type { Handoff as HandoffT, HandoffSummary, Task } from "../types";
+import type { Handoff as HandoffT, HandoffSummary, ShiftName, Task } from "../types";
 
 export default function Handoff() {
   const { isSupervisor } = useAuth();
@@ -58,12 +58,12 @@ export default function Handoff() {
 
   return (
     <>
-      <div className="page-head">
+      <header className="page-header">
         <div>
-          <h1>Shift handoff</h1>
-          <p className="muted">Unfinished work moves to the next shift automatically. Nothing is typed in twice.</p>
+          <h1>Handoff</h1>
+          <p className="subtle">Unfinished tasks move to the next shift when a supervisor ends the current one.</p>
         </div>
-      </div>
+      </header>
 
       <section className="handoff-layout">
         <div className="stack">
@@ -133,7 +133,7 @@ export default function Handoff() {
           {startNext && (
             <label className="field">
               <span>Next shift</span>
-              <select value={nextName} onChange={(e) => setNextName(e.target.value)}>
+              <select value={nextName} onChange={(e) => setNextName(e.target.value as ShiftName)}>
                 {SHIFT_NAMES.map((n) => <option key={n}>{n}</option>)}
               </select>
             </label>
