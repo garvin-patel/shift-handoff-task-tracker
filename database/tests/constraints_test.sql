@@ -11,13 +11,14 @@ SET client_min_messages = warning;
 
 BEGIN;
 
--- Test fixtures: one user, two shifts, one task, and a handoff from shift A to B
+-- Test fixtures: one user, two ended shifts, one task, and a handoff from shift A to B
 -- that already contains the task. Checks below refer to them through fx.
+-- The shifts are ended because only one shift may be active, and the seed data already has one.
 INSERT INTO users (name, email, password_hash)
 VALUES ('Constraints Test', 'constraints-test@example.com', 'fake_hash_demo_only');
 
-INSERT INTO shifts (name, started_by)
-SELECT s.name, u.id
+INSERT INTO shifts (name, started_by, ended_at)
+SELECT s.name, u.id, now()
 FROM users u, (VALUES ('constraints-test shift A'), ('constraints-test shift B')) AS s(name)
 WHERE u.email = 'constraints-test@example.com';
 
@@ -93,7 +94,7 @@ INSERT INTO checks (check_name, expect, stmt) VALUES
 
   -- Foreign keys: pointing at a row that doesn't exist (ids are never negative)
   ('shifts.started_by: unknown user rejected',           'foreign_key_violation',
-     $$INSERT INTO shifts (name, started_by) VALUES ('s', -1)$$),
+     $$INSERT INTO shifts (name, started_by, ended_at) VALUES ('s', -1, now())$$),
   ('tasks.created_by: unknown user rejected',            'foreign_key_violation',
      $$INSERT INTO tasks (title, created_by) VALUES ('t', -1)$$),
   ('tasks.assigned_user_id: unknown user rejected',      'foreign_key_violation',
@@ -129,8 +130,8 @@ INSERT INTO checks (check_name, expect, stmt) VALUES
   ('users.password_hash required', 'not_null_violation', $$INSERT INTO users (name, email, password_hash) VALUES ('n', 'nn@example.com', NULL)$$),
   ('users.role required',          'not_null_violation', $$INSERT INTO users (name, email, password_hash, role) VALUES ('n', 'nn@example.com', 'x', NULL)$$),
   ('users.created_at required',    'not_null_violation', $$INSERT INTO users (name, email, password_hash, created_at) VALUES ('n', 'nn@example.com', 'x', NULL)$$),
-  ('shifts.name required',         'not_null_violation', $$INSERT INTO shifts (name) VALUES (NULL)$$),
-  ('shifts.started_at required',   'not_null_violation', $$INSERT INTO shifts (name, started_at) VALUES ('s', NULL)$$),
+  ('shifts.name required',         'not_null_violation', $$INSERT INTO shifts (name, ended_at) VALUES (NULL, now())$$),
+  ('shifts.started_at required',   'not_null_violation', $$INSERT INTO shifts (name, started_at, ended_at) VALUES ('s', NULL, now())$$),
   ('tasks.title required',         'not_null_violation', $$INSERT INTO tasks (title, created_by) VALUES (NULL, (SELECT user_id FROM fx))$$),
   ('tasks.priority required',      'not_null_violation', $$INSERT INTO tasks (title, created_by, priority) VALUES ('t', (SELECT user_id FROM fx), NULL)$$),
   ('tasks.status required',        'not_null_violation', $$INSERT INTO tasks (title, created_by, status) VALUES ('t', (SELECT user_id FROM fx), NULL)$$),
@@ -143,7 +144,26 @@ INSERT INTO checks (check_name, expect, stmt) VALUES
   ('handoffs.from_shift_id required', 'not_null_violation', $$INSERT INTO handoffs (from_shift_id) VALUES (NULL)$$),
   ('handoffs.created_at required',    'not_null_violation', $$INSERT INTO handoffs (from_shift_id, created_at) VALUES ((SELECT shift_b FROM fx), NULL)$$),
   ('handoff_tasks.handoff_id required', 'not_null_violation', $$INSERT INTO handoff_tasks (handoff_id, task_id) VALUES (NULL, (SELECT task_id FROM fx))$$),
-  ('handoff_tasks.task_id required',    'not_null_violation', $$INSERT INTO handoff_tasks (handoff_id, task_id) VALUES ((SELECT handoff_id FROM fx), NULL)$$);
+  ('handoff_tasks.task_id required',    'not_null_violation', $$INSERT INTO handoff_tasks (handoff_id, task_id) VALUES ((SELECT handoff_id FROM fx), NULL)$$),
+
+  -- Shift, role and email rules. Kept at the end so the check numbers above don't change.
+  ('valid: role supervisor', 'accepted',
+     $$INSERT INTO users (name, email, password_hash, role) VALUES ('S', 'sup@example.com', 'x', 'supervisor')$$),
+  ('valid: ended shifts don''t count as active', 'accepted',
+     $$INSERT INTO shifts (name, ended_at) VALUES ('x', now()), ('y', now())$$),
+  ('valid: handed off to a different shift', 'accepted',
+     $$INSERT INTO handoffs (from_shift_id, to_shift_id) VALUES ((SELECT shift_b FROM fx), (SELECT shift_a FROM fx))$$),
+  ('invalid role ''admin'' rejected', 'check_violation',
+     $$INSERT INTO users (name, email, password_hash, role) VALUES ('A', 'admin@example.com', 'x', 'admin')$$),
+  ('shift ending before it starts rejected', 'check_violation',
+     $$INSERT INTO shifts (name, started_at, ended_at) VALUES ('s', now(), now() - interval '1 hour')$$),
+  ('shift handed off to itself rejected', 'check_violation',
+     $$INSERT INTO handoffs (from_shift_id, to_shift_id) VALUES ((SELECT shift_b FROM fx), (SELECT shift_b FROM fx))$$),
+  ('same email in different capitals rejected', 'unique_violation',
+     $$INSERT INTO users (name, email, password_hash) VALUES ('Dup', 'Constraints-Test@Example.com', 'x')$$),
+  -- Inserts two active shifts at once, so this fails whether or not one is already active.
+  ('two active shifts at once rejected', 'unique_violation',
+     $$INSERT INTO shifts (name) VALUES ('x'), ('y')$$);
 
 -- Run each check and record PASS or FAIL. Every statement is undone right after
 -- it runs (by raising 'undo'), so one check can never affect the next.
