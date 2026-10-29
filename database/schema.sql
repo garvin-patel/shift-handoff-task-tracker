@@ -32,3 +32,28 @@ CREATE TABLE tasks (
   updated_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
   completed_at        TIMESTAMPTZ
 );
+
+CREATE TABLE task_events (
+  id          SERIAL PRIMARY KEY,
+  task_id     INTEGER NOT NULL REFERENCES tasks(id),
+  user_id     INTEGER REFERENCES users(id),
+  action      TEXT NOT NULL,
+  old_value   TEXT,
+  new_value   TEXT,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE handoffs (
+  id               SERIAL PRIMARY KEY,
+  from_shift_id    INTEGER NOT NULL UNIQUE REFERENCES shifts(id),
+  to_shift_id      INTEGER REFERENCES shifts(id),
+  created_at       TIMESTAMPTZ NOT NULL DEFAULT now(),
+  acknowledged_by  INTEGER REFERENCES users(id),
+  acknowledged_at  TIMESTAMPTZ
+);
+
+CREATE TABLE handoff_tasks (
+  handoff_id  INTEGER NOT NULL REFERENCES handoffs(id),
+  task_id     INTEGER NOT NULL REFERENCES tasks(id),
+  PRIMARY KEY (handoff_id, task_id)
+);
