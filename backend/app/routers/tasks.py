@@ -2,7 +2,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Query, status
 
-from app.deps import CurrentUser, DbSession
+from app.deps import CurrentUser, DbSession, Supervisor
 from app.schemas import (
     CommentCreate,
     TaskAssign,
@@ -55,7 +55,10 @@ def list_tasks(
 
 @router.post("", response_model=TaskOut, status_code=status.HTTP_201_CREATED)
 def create_task(data: TaskCreate, db: DbSession, user: CurrentUser):
-    """Create a task. It is stamped with the current active shift (if any)."""
+    """Create a task. It is stamped with the current active shift (if any).
+
+    Employees can set a department; only supervisors can set `assigned_user_id`.
+    """
     return TaskOut.model_validate(svc.create_task(db, data, user))
 
 
@@ -71,19 +74,25 @@ def get_task(task_id: int, db: DbSession, _: CurrentUser):
 
 @router.patch("/{task_id}", response_model=TaskOut)
 def update_task(task_id: int, data: TaskUpdate, db: DbSession, user: CurrentUser):
-    """Edit title, description and/or priority."""
+    """Edit title, description and/or priority.
+
+    Employees can only edit tasks they created, and can't change priority.
+    """
     return TaskOut.model_validate(svc.update_task(db, task_id, data, user))
 
 
 @router.put("/{task_id}/assignment", response_model=TaskOut)
-def assign_task(task_id: int, data: TaskAssign, db: DbSession, user: CurrentUser):
-    """Assign (or unassign with `assigned_user_id: null`) a task."""
+def assign_task(task_id: int, data: TaskAssign, db: DbSession, user: Supervisor):
+    """Supervisor only: assign (or unassign with `assigned_user_id: null`) a task."""
     return TaskOut.model_validate(svc.assign_task(db, task_id, data, user))
 
 
 @router.put("/{task_id}/status", response_model=TaskOut)
 def change_status(task_id: int, data: TaskStatusUpdate, db: DbSession, user: CurrentUser):
-    """Move a task between open / in_progress / completed, with an optional note."""
+    """Move a task between open / in_progress / completed, with an optional note.
+
+    Only supervisors can reopen a completed task.
+    """
     return TaskOut.model_validate(svc.change_status(db, task_id, data.status, user, data.comment))
 
 

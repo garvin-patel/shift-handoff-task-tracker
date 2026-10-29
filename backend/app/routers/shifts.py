@@ -2,7 +2,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Query, status
 
-from app.deps import CurrentUser, DbSession
+from app.deps import CurrentUser, DbSession, Supervisor
 from app.schemas import HandoffOut, ShiftOut, ShiftStart
 from app.services import shifts as svc
 
@@ -33,8 +33,8 @@ def get_shift(shift_id: int, db: DbSession, _: CurrentUser):
 
 
 @router.post("", response_model=ShiftOut, status_code=status.HTTP_201_CREATED)
-def start_shift(data: ShiftStart, db: DbSession, user: CurrentUser):
-    """Start a new shift. Fails with 409 if another shift is active.
+def start_shift(data: ShiftStart, db: DbSession, user: Supervisor):
+    """Supervisor only: start a new shift. Fails with 409 if another shift is active.
 
     The previous shift's handoff (its unfinished tasks) is linked to the new shift.
     """
@@ -42,12 +42,12 @@ def start_shift(data: ShiftStart, db: DbSession, user: CurrentUser):
 
 
 @router.post("/{shift_id}/end", response_model=HandoffOut)
-def end_shift(shift_id: int, db: DbSession, _: CurrentUser):
-    """End the shift and hand off every unfinished task to the next shift."""
+def end_shift(shift_id: int, db: DbSession, _: Supervisor):
+    """Supervisor only: end the shift and hand off every unfinished task to the next shift."""
     return HandoffOut.model_validate(svc.end_shift(db, shift_id))
 
 
 @router.post("/{shift_id}/handoff", response_model=HandoffOut)
-def prepare_handoff(shift_id: int, db: DbSession, _: CurrentUser):
-    """Preview/prepare the handoff before ending. It is refreshed again when the shift ends."""
+def prepare_handoff(shift_id: int, db: DbSession, _: Supervisor):
+    """Supervisor only: preview/prepare the handoff before ending. It is refreshed again when the shift ends."""
     return HandoffOut.model_validate(svc.prepare_handoff(db, shift_id))

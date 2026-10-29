@@ -10,7 +10,7 @@ def _status(client, headers, task_id, status):
 
 
 def test_only_one_active_shift(client, make_user):
-    _, headers = make_user()
+    _, headers = make_user(role="supervisor")
     assert client.get("/shifts/current", headers=headers).json() is None
 
     shift = client.post("/shifts", json={"name": "Morning"}, headers=headers).json()
@@ -24,8 +24,8 @@ def test_only_one_active_shift(client, make_user):
 
 
 def test_unfinished_tasks_carry_over(client, make_user):
-    _, alice = make_user(name="Alice")
-    _, bob = make_user(name="Bob")
+    _, alice = make_user(name="Alice", role="supervisor")
+    _, bob = make_user(name="Bob", role="supervisor")
 
     morning = client.post("/shifts", json={"name": "Morning"}, headers=alice).json()
     done = _task(client, alice, "Restock towels")
@@ -75,7 +75,7 @@ def test_unfinished_tasks_carry_over(client, make_user):
 
 
 def test_prepare_handoff_is_refreshed_on_end(client, make_user):
-    _, headers = make_user()
+    _, headers = make_user(role="supervisor")
     shift = client.post("/shifts", json={"name": "Night"}, headers=headers).json()
     first = _task(client, headers, "First")
 
@@ -91,7 +91,7 @@ def test_prepare_handoff_is_refreshed_on_end(client, make_user):
 
 
 def test_empty_handoff_and_not_found(client, make_user):
-    _, headers = make_user()
+    _, headers = make_user(role="supervisor")
     shift = client.post("/shifts", json={"name": "Morning"}, headers=headers).json()
     handoff = client.post(f"/shifts/{shift['id']}/end", headers=headers).json()
     assert handoff["tasks"] == []

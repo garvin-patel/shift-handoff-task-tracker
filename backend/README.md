@@ -32,16 +32,31 @@ Settings are read from the repo-root `.env`.
 
 ### Logging in as the seed users
 
-The seed users have placeholder password hashes, so they can't log in until you give them real passwords:
+Every seed user's password is `password123`, and it works right after a reset. Maria Lopez is the supervisor; James, Priya and Marcus are employees. Sign in with, for example, `maria.lopez@example.com` / `password123`. In `/docs`, click **Authorize** and enter the email as the username.
+
+To change one user's password:
 
 ```bash
-# local
-cd backend && python -m app.scripts.set_password --all-seed-users password123
-# or inside Docker
-docker compose exec api python -m app.scripts.set_password --all-seed-users password123
+docker compose exec api python -m app.scripts.set_password maria.lopez@example.com new-password
 ```
 
-Then sign in with, for example, `maria.lopez@example.com` / `password123`. In `/docs`, click **Authorize** and enter the email as the username.
+### Roles
+
+There is no self-registration: a supervisor creates accounts with `POST /users`. Employees get `403 Forbidden` for the supervisor-only actions below.
+
+| Action | Employee | Supervisor |
+|---|---|---|
+| Create accounts | ❌ | ✅ |
+| Create a task and set its department | ✅ | ✅ |
+| Assign a task to a person, or reassign it | ❌ | ✅ |
+| Start, end, or preview a shift's handoff | ❌ | ✅ |
+| Move a task to `in_progress` or `completed`, or add a comment | ✅ | ✅ |
+| Reopen a completed task | ❌ | ✅ |
+| Change a task's priority after it's created | ❌ | ✅ |
+| Edit a task's title or description | Only tasks they created | Any task |
+| Acknowledge a handoff | ✅ | ✅ |
+
+The frontend can read the logged-in user's role from `GET /users/me` to hide buttons employees can't use.
 
 ## Tests
 
@@ -70,23 +85,22 @@ Every endpoint except `/auth/*` and `/health` needs `Authorization: Bearer <toke
 
 | Method | Path | Purpose |
 |---|---|---|
-| POST | `/auth/register` | Self-register (always `employee`) |
 | POST | `/auth/login` | JSON login, returns `{access_token, user}` |
 | POST | `/auth/token` | Form login (used by Swagger) |
 | GET | `/users/me`, `/users`, `/users/{id}` | Current user; list users (`?department=`, `?role=`) |
 | POST | `/users` | Supervisor only: create a user with any role |
 | GET | `/tasks` | List and filter: `status` (repeatable), `priority`, `assigned_user_id`, `assigned_department`, `created_in_shift`, `unfinished`, `unassigned`, `mine`, `q`, `limit`, `offset` |
-| POST | `/tasks` | Create a task |
+| POST | `/tasks` | Create a task. Only supervisors can set `assigned_user_id`. |
 | GET | `/tasks/{id}` | Task with full event history and the handoffs it appeared in |
-| PATCH | `/tasks/{id}` | Edit title, description, or priority |
-| PUT | `/tasks/{id}/assignment` | `{assigned_user_id, assigned_department?}`; send `null` to unassign |
-| PUT | `/tasks/{id}/status` | `{status, comment?}` with status `open`, `in_progress`, or `completed` |
+| PATCH | `/tasks/{id}` | Edit title, description, or priority. Employees: own tasks only, and no priority changes. |
+| PUT | `/tasks/{id}/assignment` | Supervisor only: `{assigned_user_id, assigned_department?}`; send `null` to unassign |
+| PUT | `/tasks/{id}/status` | `{status, comment?}` with status `open`, `in_progress`, or `completed`. Only supervisors can reopen a completed task. |
 | POST | `/tasks/{id}/comments` | Add a note |
 | GET | `/tasks/{id}/events` | Task history |
 | GET | `/shifts`, `/shifts/current`, `/shifts/{id}` | Shifts |
-| POST | `/shifts` | Start a shift `{name}` |
-| POST | `/shifts/{id}/end` | End the shift and create the handoff |
-| POST | `/shifts/{id}/handoff` | Preview or prepare the handoff |
+| POST | `/shifts` | Supervisor only: start a shift `{name}` |
+| POST | `/shifts/{id}/end` | Supervisor only: end the shift and create the handoff |
+| POST | `/shifts/{id}/handoff` | Supervisor only: preview or prepare the handoff |
 | GET | `/handoffs` | List handoffs (`?acknowledged=`) |
 | GET | `/handoffs/incoming` | Handoff received by the current shift |
 | GET | `/handoffs/{id}` | Handoff with its tasks (current state) |
