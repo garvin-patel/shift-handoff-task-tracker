@@ -2,21 +2,22 @@ import { useState, type FormEvent } from "react";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth";
 import { Avatar, Icon, Logo } from "../components/ui";
+import { SHIFT_HOURS } from "../format";
+import type { ShiftName } from "../types";
 
-// The seed users from database/02_seed.sql. Shown only on the dev server, for demos.
+// The seed users from database/02_seed.sql, grouped by their usual shift. Shown only on the dev server.
 const DEMO_PASSWORD = "password123";
-const DEMO_ACCOUNTS = [
-  { name: "Maria Lopez", email: "maria.lopez@example.com", role: "Supervisor · Front Desk" },
-  { name: "James Carter", email: "james.carter@example.com", role: "Employee · Front Desk" },
-  { name: "Priya Shah", email: "priya.shah@example.com", role: "Employee · Housekeeping" },
-  { name: "Marcus Reed", email: "marcus.reed@example.com", role: "Employee · Maintenance" },
-];
-
-const POINTS = [
-  { title: "Visible", text: "Open work sits on one dashboard, not in five group chats." },
-  { title: "Continuous", text: "Unfinished tasks carry into the next shift on their own." },
-  { title: "Accountable", text: "Every task has an owner, a priority and a full history." },
-  { title: "Acknowledged", text: "The incoming shift confirms what it has inherited." },
+const DEMO_TEAM: { shift: ShiftName; people: [name: string, email: string, role: string][] }[] = [
+  { shift: "Morning", people: [
+    ["Maria Lopez", "maria.lopez", "Supervisor"], ["Aisha Khan", "aisha.khan", "Housekeeping"], ["Tom Nguyen", "tom.nguyen", "Maintenance"],
+  ] },
+  { shift: "Evening", people: [
+    ["Daniel Brooks", "daniel.brooks", "Supervisor"], ["James Carter", "james.carter", "Front Desk"],
+    ["Priya Shah", "priya.shah", "Housekeeping"], ["Marcus Reed", "marcus.reed", "Maintenance"],
+  ] },
+  { shift: "Night", people: [
+    ["Sofia Rossi", "sofia.rossi", "Supervisor"], ["Leo Park", "leo.park", "Maintenance"],
+  ] },
 ];
 
 export default function Login() {
@@ -49,28 +50,15 @@ export default function Login() {
 
   return (
     <div className="login-page">
-      <section className="login-hero">
-        <div className="brand brand-light"><Logo /> <span>Shift Handoff</span></div>
-        <h1>Unfinished work should follow the shift, not end with it.</h1>
-        <ul className="hero-points">
-          {POINTS.map((p) => (
-            <li key={p.title}>
-              <span className="hero-check"><Icon name="check" size={14} /></span>
-              <div><strong>{p.title}</strong><span>{p.text}</span></div>
-            </li>
-          ))}
-        </ul>
-      </section>
-
-      <section className="login-panel">
-        <form className="login-form" onSubmit={submit}>
-          <div className="brand login-mobile-brand"><Logo /> <span>Shift Handoff</span></div>
-          <h2>Sign in</h2>
-          <p className="muted">Use your work email to see your shift's tasks.</p>
+      <div className="login-card">
+        <div className="brand"><Logo /><span>Shift Handoff</span></div>
+        <h1>Sign in</h1>
+        <p className="subtle">Unfinished work follows the shift, not the person who started it.</p>
+        <form onSubmit={submit}>
           <label className="field">
-            <span>Email</span>
+            <span>Work email</span>
             <input type="email" autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)}
-              placeholder="name@hotel.com" required autoFocus />
+              placeholder="you@hotel.com" required autoFocus />
           </label>
           <label className="field">
             <span>Password</span>
@@ -80,21 +68,32 @@ export default function Login() {
           {error && <div className="form-error" role="alert"><Icon name="alert" size={16} /> {error}</div>}
           <button className="btn btn-primary btn-block" disabled={busy}>{busy ? "Signing in…" : "Sign in"}</button>
         </form>
+        <p className="login-help">New here? Ask your supervisor to add you. They'll give you a temporary password.</p>
+      </div>
 
-        {import.meta.env.DEV && (
-          <div className="demo-accounts">
-            <p>Demo accounts <span className="muted">· password {DEMO_PASSWORD}</span></p>
-            {DEMO_ACCOUNTS.map((a) => (
-              <button key={a.email} type="button" className="demo-account" disabled={busy}
-                onClick={() => signIn(a.email, DEMO_PASSWORD)}>
-                <Avatar name={a.name} size="sm" />
-                <span><strong>{a.name}</strong><small>{a.role}</small></span>
-                <Icon name="chevron" size={16} />
-              </button>
+      {import.meta.env.DEV && (
+        <section className="demo-panel" aria-label="Demo accounts">
+          <header>
+            <strong>Demo accounts</strong>
+            <span className="subtle">Click to sign in · password <code>{DEMO_PASSWORD}</code></span>
+          </header>
+          <div className="demo-shifts">
+            {DEMO_TEAM.map((group) => (
+              <div key={group.shift} className="demo-shift">
+                <h3>{group.shift} <span>{SHIFT_HOURS[group.shift]}</span></h3>
+                {group.people.map(([name, handle, role]) => (
+                  <button key={handle} type="button" className="demo-account" disabled={busy}
+                    onClick={() => signIn(`${handle}@example.com`, DEMO_PASSWORD)}>
+                    <Avatar name={name} size="sm" />
+                    <span className="demo-name">{name}</span>
+                    <span className={`demo-role ${role === "Supervisor" ? "is-supervisor" : ""}`}>{role}</span>
+                  </button>
+                ))}
+              </div>
             ))}
           </div>
-        )}
-      </section>
+        </section>
+      )}
     </div>
   );
 }

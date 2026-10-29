@@ -7,13 +7,13 @@ from sqlalchemy.orm import Session
 
 from app.deps import DbSession
 from app.models import User
-from app.schemas import LoginRequest, RegisterRequest, Token, UserOut
+from app.schemas import LoginRequest, Token, UserCreate, UserOut
 from app.security import create_access_token, hash_password, verify_password
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
-def create_user(db: Session, data: RegisterRequest, role: str) -> User:
+def create_user(db: Session, data: UserCreate, role: str) -> User:
     email = data.email.lower()
     if db.scalar(select(User.id).where(func.lower(User.email) == email)) is not None:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email is already registered")
@@ -23,6 +23,7 @@ def create_user(db: Session, data: RegisterRequest, role: str) -> User:
         password_hash=hash_password(data.password),
         role=role,
         department=data.department,
+        usual_shift=data.usual_shift.value if data.usual_shift else None,
     )
     db.add(user)
     db.commit()

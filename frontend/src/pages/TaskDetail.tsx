@@ -49,13 +49,13 @@ export default function TaskDetail() {
       <Link to="/" className="back-link"><Icon name="back" size={16} /> Tasks</Link>
 
       <div className="detail-grid">
-        <article className={`card task-card priority-bar-${task.priority}`}>
+        <article className={`card detail-card priority-bar-${task.priority}`}>
           {editing ? (
             <EditForm task={task} onCancel={() => setEditing(false)}
               onSave={(title, description) => run(() => api.updateTask(task.id, { title, description }), "Task updated.").then((ok) => ok && setEditing(false))} />
           ) : (
             <>
-              <div className="task-card-head">
+              <div className="detail-card-head">
                 <h1>{task.title}</h1>
                 {canEdit && <button className="icon-btn" onClick={() => setEditing(true)} title="Edit" aria-label="Edit title and details"><Icon name="edit" /></button>}
               </div>

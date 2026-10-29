@@ -3,6 +3,7 @@
 export type Role = "employee" | "supervisor";
 export type Priority = "low" | "medium" | "high";
 export type Status = "open" | "in_progress" | "completed";
+export type ShiftName = "Morning" | "Evening" | "Night";
 
 export interface UserBrief {
   id: number;
@@ -13,7 +14,17 @@ export interface UserBrief {
 export interface User extends UserBrief {
   email: string;
   role: Role;
+  usual_shift: ShiftName | null;
   created_at: string;
+}
+
+export interface NewUser {
+  name: string;
+  email: string;
+  password: string;
+  role: Role;
+  department: string | null;
+  usual_shift: ShiftName | null;
 }
 
 export interface Shift {

@@ -6,7 +6,7 @@ PostgreSQL 17, running in Docker. The tables are defined in [`01_schema.sql`](01
 
 | Table | What it's for |
 |---|---|
-| `users` | Everyone who logs in. `role` is `employee` or `supervisor`, and `department` is e.g. Front Desk or Maintenance. |
+| `users` | Everyone who logs in. `role` is `employee` or `supervisor`, `department` is e.g. Front Desk or Maintenance, and `usual_shift` is the shift they normally work. |
 | `shifts` | A block of work time, such as "Evening". `ended_at` is empty while the shift is still going. Only one shift can be going at a time. |
 | `tasks` | A piece of work: title, priority, status, who it's assigned to, and which shift created it. |
 | `task_events` | A task's history. A new row is added every time something about a task changes; old rows are never edited. |
@@ -24,6 +24,7 @@ erDiagram
         text password_hash
         text role
         text department
+        text usual_shift
         timestamptz created_at
     }
     shifts {
@@ -93,6 +94,7 @@ The database enforces these links. You can't point at a user, shift or task that
 | `tasks.priority` | `low`, `medium`, `high` | `medium` |
 | `tasks.status` | `open`, `in_progress`, `completed` | `open` |
 | `users.role` | `employee`, `supervisor` | `employee` |
+| `users.usual_shift` | `Morning`, `Evening`, `Night` | empty (no regular shift) |
 
 These are lowercase and exact: `High`, `done` or `admin` is rejected.
 
@@ -184,7 +186,7 @@ Every line should say `PASS`. The tests don't change any data.
 
 | Table | What's in it |
 |---|---|
-| `users` | Maria Lopez (supervisor, Front Desk), James Carter (Front Desk), Priya Shah (Housekeeping) and Marcus Reed (Maintenance) |
+| `users` | 9 staff, one supervisor per shift. Morning: Maria Lopez (supervisor), Aisha Khan, Tom Nguyen. Evening: Daniel Brooks (supervisor), James Carter, Priya Shah, Marcus Reed. Night: Sofia Rossi (supervisor), Leo Park. |
 | `shifts` | Evening (yesterday, ended), Morning (today, ended), and Evening (today, started 1 hour ago and still going) |
 | `tasks` | 6 hotel tasks, including "Room 312 AC broken" |
 | `handoffs` | 1 handoff, from the first Evening shift to the Morning shift |

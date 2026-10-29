@@ -21,6 +21,14 @@ class UserRole(StrEnum):
     supervisor = "supervisor"
 
 
+class ShiftName(StrEnum):
+    """The regular shift a staff member works."""
+
+    morning = "Morning"
+    evening = "Evening"
+    night = "Night"
+
+
 class ORMModel(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -47,6 +55,7 @@ class UserOut(ORMModel):
     email: str
     role: str
     department: str | None
+    usual_shift: str | None
     created_at: datetime
 
 
@@ -63,6 +72,14 @@ class UserCreate(RegisterRequest):
     """Supervisor-only: create a user with any role."""
 
     role: UserRole = UserRole.employee
+    usual_shift: ShiftName | None = None
+
+
+class PasswordChange(BaseModel):
+    current_password: str
+    new_password: str = Field(min_length=8)
+
+    _new_password = field_validator("new_password")(_check_password)
 
 
 class LoginRequest(BaseModel):

@@ -8,14 +8,14 @@ The backend is built (see [`backend/README.md`](../backend/README.md)). The fron
 
 | Coverage | Tests | Meaning |
 |---|---|---|
-| ✅ | 20 | An automated test already checks this. |
+| ✅ | 21 | An automated test already checks this. |
 | 🟡 | 7 | An automated test checks part of it. The gap is noted. |
 | ⬜ | 2 | Not automated yet. |
 | 🧑 | 7 | Manual. Needs the frontend, or is covered by the walkthrough. |
 
 **Where the automated tests are:**
-- [`backend/tests/`](../backend/tests/) has 34 pytest tests. They send real requests through the API (using FastAPI's `TestClient`) and check what comes back. So one test usually covers both a "unit" item and an "integration" item below.
-- [`database/tests/constraints_test.sql`](../database/tests/constraints_test.sql) has 59 checks that the database enforces its rules.
+- [`backend/tests/`](../backend/tests/) has 38 pytest tests. They send real requests through the API (using FastAPI's `TestClient`) and check what comes back. So one test usually covers both a "unit" item and an "integration" item below.
+- [`database/tests/constraints_test.sql`](../database/tests/constraints_test.sql) has 61 checks that the database enforces its rules.
 
 **Walkthrough dry run, Oct 29 2026:** all 14 steps of the [Room 312 walkthrough](#manual-shift-change-walkthrough-room-312) passed. They were run through the API on a temporary copy of the seed data, since there's no frontend yet.
 
@@ -273,7 +273,14 @@ The proposal's user stories give supervisors the job of assigning tasks. These t
 
 *Covered by `test_employees_can_still_do_their_work`.*
 
-**7.8 Employees don't see supervisor-only buttons** (manual, Arjun) 🧑
+**7.8 Supervisors add staff, and staff change their own password** (integration, Sadbhab) ✅
+1. As a supervisor, send `POST /users` with a usual shift. Expect `201`. The new person can sign in with the temporary password.
+2. Send a usual shift of `Afternoon`. Expect `422`.
+3. As the new person, change the password with `POST /users/me/password`. A wrong current password gets `400`. Afterwards the old password gets `401`, and the new one works.
+
+*Covered by `test_users.py`.*
+
+**7.9 Employees don't see supervisor-only buttons** (manual, Arjun) 🧑
 1. Log in as James (an employee). Check that there are no buttons to start or end a shift, assign a person, reopen a completed task or change priority.
 2. Log in as Maria (the supervisor). Check that all of those buttons are there.
 
@@ -297,35 +304,37 @@ This walks through the proposal's Room 312 story with the real app. Run it at le
 
 3. Until the frontend exists, run each step at **http://localhost:8000/docs**. Click **Authorize** and log in with the user's email (for example `james.carter@example.com`) and `password123`. Every demo user has that password. Then use the endpoint shown in the API column.
 
-**Starting state (from the seed):** The current shift is Evening (shift 3). Room 312 (task 1) is `in_progress`, assigned to Marcus Reed, with high priority. It was carried over from the previous evening.
+**Starting state (from the seed):** The current shift is Evening (shift 3), run by Daniel Brooks. Room 312 (task 1) is `in_progress`, assigned to Marcus Reed, with high priority. It was carried over from the previous evening.
+
+**Who's who:** each shift has one supervisor. Daniel runs Evening, Sofia Rossi runs Night, and Maria Lopez runs Morning. The Team page lists everyone.
 
 ### Part 1: Evening shift, logged in as James Carter
 
 | # | Do this | API | Expect this | Checks question |
 |---|---|---|---|---|
 | 1 | Open the dashboard. | `GET /tasks?unfinished=true` | The unfinished tasks are Room 312, the lobby elevator, and the VIP amenity. The towels, late checkout and pool light tasks are not listed. | 3 |
-| 2 | Open Room 312. | `GET /tasks/1` | Its history shows it was created by James, assigned to Marcus, moved to in progress, and has two notes from Marcus. | 2 |
+| 2 | Open Room 312. | `GET /tasks/1` | Its history shows it was reported by James, assigned to Marcus by Daniel, and moved to in progress. It also has a note from Marcus (evening) and one from Tom (morning). | 2 |
 | 3 | Add the note "Part arrived, installing at 8 AM." | `POST /tasks/1/comments` | The note appears in the history, with James's name and the time. | 2 |
 | 4 | Create the task "Room 415 TV not turning on": priority low, department Maintenance. | `POST /tasks` | It's created with status open and `created_in_shift` 3. | 1 |
 | 5 | Mark the VIP amenity task (task 6) as completed. | `PUT /tasks/6/status` | Its status is completed. | 2 |
-| 6 | Try to end the shift as James. Then log in as Maria (the supervisor) and end it. | `POST /shifts/3/end` | James gets `403`, because only supervisors end shifts. When Maria ends it, a handoff is created containing **exactly 3 tasks**: Room 312, the elevator, and Room 415. The VIP amenity task is not included. | 3, 4, 6, 7 |
+| 6 | Try to end the shift as James. Then log in as Daniel (Evening supervisor), end it, and start the next shift. | `POST /shifts/3/end`, then `POST /shifts` with `Night` | James gets `403`, because only supervisors end shifts. When Daniel ends it, a handoff is created containing **exactly 3 tasks**: Room 312, the elevator, and Room 415. The VIP amenity task is not included. The next shift is suggested as Night. | 3, 4, 6, 7 |
 
-### Part 2: Morning shift, logged in as Maria Lopez (supervisor)
+### Part 2: Night shift, logged in as Sofia Rossi (Night supervisor)
 
 | # | Do this | API | Expect this | Checks question |
 |---|---|---|---|---|
-| 7 | Start the Morning shift, then open the handoff screen. | `POST /shifts`, then `GET /handoffs/incoming` | The handoff shows the same 3 tasks. | 4, 6 |
+| 7 | Open the Tasks page, then the handoff screen. | `GET /handoffs/incoming` | A banner says Evening handed over 3 tasks, and those cards are marked "Handed over". The handoff screen shows the same 3 tasks. | 4, 6 |
 | 8 | Open Room 312 from the handoff. | `GET /tasks/1` | You can see its owner (Marcus), its priority (high), and the 8 AM note from step 3. | 4 |
 | 9 | Compare the handoff with the dashboard. | `GET /tasks?unfinished=true` | Nothing is listed twice, and the handoff has exactly the same tasks as the dashboard. | 6 |
-| 10 | Click Acknowledge. | `POST /handoffs/{id}/acknowledge` | The handoff shows it was acknowledged by Maria, with the time. | 5 |
-| 11 | Log in as James and acknowledge the same handoff. | Same request, logged in as James | Rejected with `409` "already acknowledged". The handoff still shows Maria. | 5 |
+| 10 | Click "I've reviewed this handoff". | `POST /handoffs/{id}/acknowledge` | The handoff shows it was acknowledged by Sofia, with the time. | 5 |
+| 11 | Log in as James and acknowledge the same handoff. | Same request, logged in as James | Rejected with `409` "already acknowledged". The handoff still shows Sofia. | 5 |
 
-### Part 3: Fixing it, logged in as Marcus Reed
+### Part 3: Fixing it, logged in as Leo Park (Night maintenance)
 
 | # | Do this | API | Expect this | Checks question |
 |---|---|---|---|---|
 | 12 | Mark Room 312 as completed. | `PUT /tasks/1/status` | Its status is completed, and `completed_at` is filled in. | 2 |
-| 13 | Log in as Maria and end the Morning shift. | `GET /shifts/current` to find its id, then `POST /shifts/{id}/end` | The new handoff contains only the elevator and Room 415. Room 312 is not in it. | 3, 4, 6 |
+| 13 | Log in as Sofia and end the Night shift. | `GET /shifts/current` to find its id, then `POST /shifts/{id}/end` | The new handoff contains only the elevator and Room 415. Room 312 is not in it. | 3, 4, 6 |
 | 14 | Look up Room 312's full history. | `GET /tasks/1` | It's completed. Its history runs from creation to completion, and `handoff_ids` lists 2 handoffs: the seed one and the one from step 6. | 3 |
 
 New task, shift and handoff ids depend on what's already in the database, so check them in each response rather than expecting fixed numbers.
@@ -376,7 +385,7 @@ The backend answered our earlier open questions. These are the current behaviors
 | Can a completed task be reopened? | **Yes, but only by a supervisor.** Setting the status back to `open` or `in_progress` clears `completed_at` and adds a `status_changed` event. |
 | Who can acknowledge a handoff? | **Any logged-in user, once the next shift has started, and only once.** A second acknowledgment gets `409`. |
 | What happens if someone ends a shift that's already ended? | **`409` "already ended".** No second handoff is created. |
-| Who can create accounts? | **Supervisors only**, with `POST /users`. Self-registration is turned off. |
+| Who can create accounts? | **Supervisors only**, with **Add staff member** on the Team page (`POST /users`). They set a temporary password, and the person changes it from their profile menu. Self-registration is turned off. |
 | Who can start and end shifts? | **Supervisors only.** |
 | What else is supervisor-only? | Assigning a person to a task, changing priority after creation, and editing other people's tasks. The full list is in [`backend/README.md`](../backend/README.md#roles). |
 

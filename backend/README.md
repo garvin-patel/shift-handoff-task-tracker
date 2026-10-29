@@ -32,7 +32,7 @@ Settings are read from the repo-root `.env`.
 
 ### Logging in as the seed users
 
-Every seed user's password is `password123`, and it works right after a reset. Maria Lopez is the supervisor; James, Priya and Marcus are employees. Sign in with, for example, `maria.lopez@example.com` / `password123`. In `/docs`, click **Authorize** and enter the email as the username.
+Every seed user's password is `password123`, and it works right after a reset. There are 9 staff with one supervisor per shift: Morning: Maria Lopez (supervisor), Aisha Khan, Tom Nguyen. Evening: Daniel Brooks (supervisor), James Carter, Priya Shah, Marcus Reed. Night: Sofia Rossi (supervisor), Leo Park. Sign in with, for example, `maria.lopez@example.com` / `password123`. In `/docs`, click **Authorize** and enter the email as the username.
 
 To change one user's password:
 
@@ -88,7 +88,8 @@ Every endpoint except `/auth/*` and `/health` needs `Authorization: Bearer <toke
 | POST | `/auth/login` | JSON login, returns `{access_token, user}` |
 | POST | `/auth/token` | Form login (used by Swagger) |
 | GET | `/users/me`, `/users`, `/users/{id}` | Current user; list users (`?department=`, `?role=`) |
-| POST | `/users` | Supervisor only: create a user with any role |
+| POST | `/users` | Supervisor only: add a staff member `{name, email, password, role, department, usual_shift}`. The password is a temporary one to hand over. |
+| POST | `/users/me/password` | Change your own password `{current_password, new_password}` |
 | GET | `/tasks` | List and filter: `status` (repeatable), `priority`, `assigned_user_id`, `assigned_department`, `created_in_shift`, `unfinished`, `unassigned`, `mine`, `q`, `limit`, `offset` |
 | POST | `/tasks` | Create a task. Only supervisors can set `assigned_user_id`. |
 | GET | `/tasks/{id}` | Task with full event history and the handoffs it appeared in |

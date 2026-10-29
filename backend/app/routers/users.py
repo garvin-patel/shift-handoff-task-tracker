@@ -1,10 +1,11 @@
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, Response, status
 from sqlalchemy import select
 
 from app.deps import CurrentUser, DbSession, Supervisor
 from app.models import User
 from app.routers.auth import create_user
-from app.schemas import UserCreate, UserOut
+from app.schemas import PasswordChange, UserCreate, UserOut
+from app.security import hash_password, verify_password
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -12,6 +13,16 @@ router = APIRouter(prefix="/users", tags=["users"])
 @router.get("/me", response_model=UserOut)
 def me(user: CurrentUser):
     return UserOut.model_validate(user)
+
+
+@router.post("/me/password", status_code=status.HTTP_204_NO_CONTENT)
+def change_my_password(data: PasswordChange, db: DbSession, user: CurrentUser):
+    """Change your own password, e.g. to replace the temporary one a supervisor gave you."""
+    if not verify_password(data.current_password, user.password_hash):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Current password is incorrect")
+    user.password_hash = hash_password(data.new_password)
+    db.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.get("", response_model=list[UserOut])
@@ -40,5 +51,6 @@ def get_user(user_id: int, db: DbSession, _: CurrentUser):
 
 @router.post("", response_model=UserOut, status_code=status.HTTP_201_CREATED)
 def create_user_as_supervisor(data: UserCreate, db: DbSession, _: Supervisor):
-    """Supervisors can create users with any role."""
+    """Supervisors add staff: name, work email (used to sign in), a temporary password, role,
+    department and usual shift."""
     return UserOut.model_validate(create_user(db, data, role=data.role.value))
