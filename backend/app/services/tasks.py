@@ -15,7 +15,7 @@ from sqlalchemy.orm import Session, selectinload
 
 from app.models import Task, TaskEvent, User, handoff_tasks
 from app.schemas import TaskAssign, TaskCreate, TaskStatus, TaskUpdate
-from app.services.common import bad_request, not_found, utcnow
+from app.services.common import bad_request, forbidden, is_supervisor, not_found, utcnow
 from app.services.shifts import get_active_shift
 
 # Sort high -> low priority.
@@ -112,6 +112,9 @@ def list_tasks(
 
 
 def create_task(db: Session, data: TaskCreate, actor: User) -> Task:
+    # Employees can route a task to a department; only supervisors pick the person.
+    if data.assigned_user_id is not None and not is_supervisor(actor):
+        raise forbidden("Only supervisors can assign a task to a person")
     assignee = _get_user(db, data.assigned_user_id) if data.assigned_user_id is not None else None
     department = data.assigned_department or (assignee.department if assignee else None)
     shift = get_active_shift(db)
@@ -140,6 +143,12 @@ def update_task(db: Session, task_id: int, data: TaskUpdate, actor: User) -> Tas
     task = _lock_task(db, task_id)
     fields = data.model_fields_set
     changed = False
+
+    if not is_supervisor(actor):
+        if task.created_by != actor.id:
+            raise forbidden("You can only edit tasks you created")
+        if "priority" in fields and data.priority is not None and data.priority.value != task.priority:
+            raise forbidden("Only supervisors can change a task's priority")
 
     if "title" in fields:
         if data.title is None or not data.title.strip():
@@ -196,6 +205,10 @@ def change_status(db: Session, task_id: int, new_status: TaskStatus, actor: User
     task = _lock_task(db, task_id)
     now = utcnow()
     changed = False
+
+    reopening = task.status == TaskStatus.completed and new_status != TaskStatus.completed
+    if reopening and not is_supervisor(actor):
+        raise forbidden("Only supervisors can reopen a completed task")
 
     if new_status.value != task.status:
         changed = _log(db, task, actor, "status_changed", task.status, new_status.value)
