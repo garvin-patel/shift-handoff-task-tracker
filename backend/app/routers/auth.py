@@ -40,10 +40,7 @@ def _authenticate(db: Session, email: str, password: str) -> Token:
     return Token(access_token=create_access_token(user.id), user=UserOut.model_validate(user))
 
 
-@router.post("/register", response_model=UserOut, status_code=status.HTTP_201_CREATED)
-def register(data: RegisterRequest, db: DbSession):
-    """Self-registration. New accounts are always employees."""
-    return UserOut.model_validate(create_user(db, data, role="employee"))
+# There is no self-registration: supervisors create accounts with POST /users.
 
 
 @router.post("/login", response_model=Token)
