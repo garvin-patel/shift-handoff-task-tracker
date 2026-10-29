@@ -7,7 +7,7 @@ PostgreSQL 17, running in Docker. The tables are defined in [`01_schema.sql`](01
 | Table | What it's for |
 |---|---|
 | `users` | Everyone who logs in. `role` is `employee` or `supervisor`, and `department` is e.g. Front Desk or Maintenance. |
-| `shifts` | A block of work time, such as "Evening". `ended_at` is empty while the shift is still going. |
+| `shifts` | A block of work time, such as "Evening". `ended_at` is empty while the shift is still going. Only one shift can be going at a time. |
 | `tasks` | A piece of work: title, priority, status, who it's assigned to, and which shift created it. |
 | `task_events` | A task's history. A new row is added every time something about a task changes; old rows are never edited. |
 | `handoffs` | One shift handing over to the next. Each shift can be handed off only once. |
@@ -92,13 +92,22 @@ The database enforces these links. You can't point at a user, shift or task that
 |---|---|---|
 | `tasks.priority` | `low`, `medium`, `high` | `medium` |
 | `tasks.status` | `open`, `in_progress`, `completed` | `open` |
+| `users.role` | `employee`, `supervisor` | `employee` |
 
-These are lowercase and exact: `High` or `done` is rejected.
+These are lowercase and exact: `High`, `done` or `admin` is rejected.
 
-The values below are only conventions, not enforced by the database:
+The database also enforces these rules:
 
-- `users.role`: `employee` (default) or `supervisor`
-- `task_events.action`: `created`, `assigned`, `status_changed`, `priority_changed`, `comment`
+| Rule | Example that is rejected |
+|---|---|
+| Emails are unique, ignoring capitalization | `Maria.Lopez@example.com` when `maria.lopez@example.com` already exists |
+| Only one shift can be active at a time | Starting a shift while another has no `ended_at` |
+| A shift can't end before it starts | `ended_at` earlier than `started_at` |
+| A shift can't hand off to itself | `to_shift_id` equal to `from_shift_id` |
+| A shift can be handed off only once | A second `handoffs` row with the same `from_shift_id` |
+| A task can appear only once per handoff | The same task twice in `handoff_tasks` |
+
+`task_events.action` is a convention, not enforced by the database. The backend uses these actions: `created`, `assigned`, `department_changed`, `status_changed`, `priority_changed`, `title_changed`, `description_changed`, `comment`.
 
 ## How a handoff works
 
