@@ -8,14 +8,14 @@ The backend is built (see [`backend/README.md`](../backend/README.md)). The fron
 
 | Coverage | Tests | Meaning |
 |---|---|---|
-| ✅ | 13 | An automated test already checks this. |
+| ✅ | 20 | An automated test already checks this. |
 | 🟡 | 7 | An automated test checks part of it. The gap is noted. |
 | ⬜ | 2 | Not automated yet. |
-| 🧑 | 6 | Manual. Needs the frontend, or is covered by the walkthrough. |
+| 🧑 | 7 | Manual. Needs the frontend, or is covered by the walkthrough. |
 
 **Where the automated tests are:**
-- [`backend/tests/`](../backend/tests/) has 18 pytest tests written by Sadbhab. They send real requests through the API (using FastAPI's `TestClient`) and check what comes back. So one test usually covers both a "unit" item and an "integration" item below.
-- [`database/tests/constraints_test.sql`](../database/tests/constraints_test.sql) has 51 checks that the database enforces its rules.
+- [`backend/tests/`](../backend/tests/) has 34 pytest tests. They send real requests through the API (using FastAPI's `TestClient`) and check what comes back. So one test usually covers both a "unit" item and an "integration" item below.
+- [`database/tests/constraints_test.sql`](../database/tests/constraints_test.sql) has 59 checks that the database enforces its rules.
 
 **Walkthrough dry run, Oct 29 2026:** all 14 steps of the [Room 312 walkthrough](#manual-shift-change-walkthrough-room-312) passed. They were run through the API on a temporary copy of the seed data, since there's no frontend yet.
 
@@ -224,6 +224,59 @@ Covered in steps 10 and 11 of the walkthrough.
 
 Covered in steps 6, 9 and 13 of the walkthrough.
 
+## 7. Do supervisors and employees have the right controls?
+
+The proposal's user stories give supervisors the job of assigning tasks. These tests check the full role rules in [`backend/README.md`](../backend/README.md#roles). Employees get `403 Forbidden`, and nothing changes.
+
+**7.1 Only supervisors create accounts** (integration, Sadbhab) ✅
+1. As an employee, send `POST /users`. Expect `403`. As a supervisor, expect `201`.
+2. Send `POST /auth/register`. Expect `404`, because self-registration is turned off.
+
+*Covered by `test_only_supervisors_create_users` and `test_self_registration_is_off`.*
+
+**7.2 Only supervisors start, end or preview shifts** (integration, Sadbhab) ✅
+1. As an employee, send `POST /shifts`, `POST /shifts/{id}/handoff` and `POST /shifts/{id}/end`. Expect `403` each time, with the shift unchanged.
+2. As a supervisor, expect them to work.
+
+*Covered by `test_only_supervisors_start_and_end_shifts`.*
+
+**7.3 Only supervisors assign a person; employees can set a department** (integration, Sadbhab) ✅
+1. As an employee, create a task with `assigned_user_id`. Expect `403`, and no task created.
+2. As an employee, create a task with only `assigned_department`. Expect `201`.
+3. As an employee, send `PUT /tasks/{id}/assignment`. Expect `403`. As a supervisor, expect `200`.
+
+*Covered by `test_only_supervisors_assign_people`.*
+
+**7.4 Only supervisors reopen completed tasks** (integration, Sadbhab) ✅
+1. As an employee, move a task through `in_progress`, back to `open`, then to `completed`. Expect all of these to work.
+2. As an employee, set the completed task to `open` or `in_progress`. Expect `403`, the task still completed, and no new history entry.
+3. As a supervisor, reopen it. Expect `200`, with `completed_at` cleared.
+
+*Covered by `test_only_supervisors_reopen_completed_tasks`.*
+
+**7.5 Only supervisors change priority** (integration, Sadbhab) ✅
+1. As an employee, create a task with priority `high`. This is allowed.
+2. As that employee, change it to `low`. Expect `403`.
+3. As a supervisor, change it. Expect `200`.
+
+*Covered by `test_only_supervisors_change_priority`.*
+
+**7.6 Employees edit only their own tasks** (integration, Sadbhab) ✅
+1. Have one employee edit another employee's task title. Expect `403`.
+2. Have the employee who created the task edit it, and a supervisor edit it too. Expect `200` both times.
+
+*Covered by `test_employees_edit_only_their_own_tasks`.*
+
+**7.7 Employees can still do their everyday work** (integration, Sadbhab) ✅
+1. As an employee, comment on someone else's task and change its status. Expect both to work.
+2. As an employee, acknowledge a handoff. Expect it to work.
+
+*Covered by `test_employees_can_still_do_their_work`.*
+
+**7.8 Employees don't see supervisor-only buttons** (manual, Arjun) 🧑
+1. Log in as James (an employee). Check that there are no buttons to start or end a shift, assign a person, reopen a completed task or change priority.
+2. Log in as Maria (the supervisor). Check that all of those buttons are there.
+
 ## Manual shift-change walkthrough: Room 312
 
 This walks through the proposal's Room 312 story with the real app. Run it at least once before the demo, and again after any change to handoff code.
@@ -255,9 +308,9 @@ This walks through the proposal's Room 312 story with the real app. Run it at le
 | 3 | Add the note "Part arrived, installing at 8 AM." | `POST /tasks/1/comments` | The note appears in the history, with James's name and the time. | 2 |
 | 4 | Create the task "Room 415 TV not turning on": priority low, department Maintenance. | `POST /tasks` | It's created with status open and `created_in_shift` 3. | 1 |
 | 5 | Mark the VIP amenity task (task 6) as completed. | `PUT /tasks/6/status` | Its status is completed. | 2 |
-| 6 | End the shift. | `POST /shifts/3/end` | A handoff is created containing **exactly 3 tasks**: Room 312, the elevator, and Room 415. The VIP amenity task is not included. | 3, 4, 6 |
+| 6 | Try to end the shift as James. Then log in as Maria (the supervisor) and end it. | `POST /shifts/3/end` | James gets `403`, because only supervisors end shifts. When Maria ends it, a handoff is created containing **exactly 3 tasks**: Room 312, the elevator, and Room 415. The VIP amenity task is not included. | 3, 4, 6, 7 |
 
-### Part 2: Morning shift, logged in as Maria Lopez
+### Part 2: Morning shift, logged in as Maria Lopez (supervisor)
 
 | # | Do this | API | Expect this | Checks question |
 |---|---|---|---|---|
@@ -272,7 +325,7 @@ This walks through the proposal's Room 312 story with the real app. Run it at le
 | # | Do this | API | Expect this | Checks question |
 |---|---|---|---|---|
 | 12 | Mark Room 312 as completed. | `PUT /tasks/1/status` | Its status is completed, and `completed_at` is filled in. | 2 |
-| 13 | End the Morning shift. | `GET /shifts/current` to find its id, then `POST /shifts/{id}/end` | The new handoff contains only the elevator and Room 415. Room 312 is not in it. | 3, 4, 6 |
+| 13 | Log in as Maria and end the Morning shift. | `GET /shifts/current` to find its id, then `POST /shifts/{id}/end` | The new handoff contains only the elevator and Room 415. Room 312 is not in it. | 3, 4, 6 |
 | 14 | Look up Room 312's full history. | `GET /tasks/1` | It's completed. Its history runs from creation to completion, and `handoff_ids` lists 2 handoffs: the seed one and the one from step 6. | 3 |
 
 New task, shift and handoff ids depend on what's already in the database, so check them in each response rather than expecting fixed numbers.
@@ -320,12 +373,14 @@ The backend answered our earlier open questions. These are the current behaviors
 
 | Question | What the backend does now |
 |---|---|
-| Can a completed task be reopened? | **Yes.** Setting the status back to `open` or `in_progress` clears `completed_at` and adds a `status_changed` event. |
+| Can a completed task be reopened? | **Yes, but only by a supervisor.** Setting the status back to `open` or `in_progress` clears `completed_at` and adds a `status_changed` event. |
 | Who can acknowledge a handoff? | **Any logged-in user, once the next shift has started, and only once.** A second acknowledgment gets `409`. |
 | What happens if someone ends a shift that's already ended? | **`409` "already ended".** No second handoff is created. |
+| Who can create accounts? | **Supervisors only**, with `POST /users`. Self-registration is turned off. |
+| Who can start and end shifts? | **Supervisors only.** |
+| What else is supervisor-only? | Assigning a person to a task, changing priority after creation, and editing other people's tasks. The full list is in [`backend/README.md`](../backend/README.md#roles). |
 
 ## Open questions
 
-- **Should anyone be able to create an account?** Right now `POST /auth/register` is open to anyone. On a public deployment, strangers could sign up.
-- **Should only supervisors start and end shifts?** Right now any logged-in user can.
+- ✅ **Resolved: who can create accounts, and who can start and end shifts.** Both are supervisor-only. See the Decisions table and section 7.
 - ✅ **Resolved: the deployed app needs its own `JWT_SECRET`.** With `APP_ENV=production`, the API now refuses to start if `JWT_SECRET` is missing, is a placeholder, or is shorter than 32 characters. This is tested in `backend/tests/test_config.py`.

@@ -9,7 +9,7 @@ def _actions(client, headers, task_id):
 
 
 def test_create_task_defaults_and_events(client, make_user):
-    me, headers = make_user()
+    me, headers = make_user(role="supervisor")
     tech, _ = make_user(name="Marcus", department="Maintenance")
 
     task = _create(client, headers, priority="high", assigned_user_id=tech["id"])
@@ -26,13 +26,13 @@ def test_create_task_defaults_and_events(client, make_user):
 
 
 def test_create_task_stamps_active_shift(client, make_user):
-    _, headers = make_user()
+    _, headers = make_user(role="supervisor")
     shift = client.post("/shifts", json={"name": "Morning"}, headers=headers).json()
     assert _create(client, headers)["created_in_shift"] == shift["id"]
 
 
 def test_create_task_validation(client, make_user):
-    _, headers = make_user()
+    _, headers = make_user(role="supervisor")
     assert client.post("/tasks", json={"title": ""}, headers=headers).status_code == 422
     assert client.post("/tasks", json={"title": "x", "priority": "urgent"}, headers=headers).status_code == 422
     r = client.post("/tasks", json={"title": "x", "assigned_user_id": 999}, headers=headers)
@@ -40,7 +40,7 @@ def test_create_task_validation(client, make_user):
 
 
 def test_update_task_logs_changes(client, make_user):
-    _, headers = make_user()
+    _, headers = make_user(role="supervisor")
     task = _create(client, headers)
 
     r = client.patch(f"/tasks/{task['id']}", json={"priority": "high", "description": "Warm air"}, headers=headers)
@@ -58,7 +58,7 @@ def test_update_task_logs_changes(client, make_user):
 
 
 def test_assign_reassign_unassign(client, make_user):
-    _, headers = make_user()
+    _, headers = make_user(role="supervisor")
     a, _ = make_user(name="A", department="Housekeeping")
     b, _ = make_user(name="B", department="Maintenance")
     task = _create(client, headers)
@@ -80,7 +80,7 @@ def test_assign_reassign_unassign(client, make_user):
 
 
 def test_status_changes(client, make_user):
-    _, headers = make_user()
+    _, headers = make_user(role="supervisor")
     task = _create(client, headers)
     url = f"/tasks/{task['id']}/status"
 
@@ -114,7 +114,7 @@ def test_comments_and_detail(client, make_user):
 
 
 def test_list_filters(client, make_user):
-    me, headers = make_user()
+    me, headers = make_user(role="supervisor")
     other, _ = make_user(department="Maintenance")
     low = _create(client, headers, title="Pool light", priority="low")
     high = _create(client, headers, title="Elevator noise", priority="high", assigned_user_id=other["id"])
